@@ -26,6 +26,31 @@ it('accepts a signed url', function () {
     $this->get($url)->assertSuccessful();
 });
 
+it('accepts a signed url carrying repeated query parameters', function () {
+    $url = $this->urlSigner->sign("{$this->hostName}/protected-route?tag=a&tag=b", 1);
+
+    $this->get($url)->assertSuccessful();
+});
+
+it('rejects a signed url whose repeated query parameters were tampered with', function () {
+    $url = $this->urlSigner->sign("{$this->hostName}/protected-route?tag=a&tag=b", 1);
+
+    $this->get(str_replace('tag=a&tag=b', 'tag=b&tag=a', $url))->assertForbidden();
+});
+
+it('rejects a request with a duplicated expires or signature parameter', function () {
+    $url = $this->urlSigner->sign("{$this->hostName}/protected-route", 1);
+
+    $this->get($url.'&expires='.now()->addHour()->timestamp)->assertForbidden();
+    $this->get($url.'&signature=forged-signature')->assertForbidden();
+});
+
+it('accepts an otherwise signed url that uses the default port', function () {
+    $url = $this->urlSigner->sign("{$this->hostName}/protected-route", 1);
+
+    $this->get(str_replace('http://localhost', 'http://localhost:80', $url))->assertSuccessful();
+});
+
 it('rejects a forged url', function () {
     $this
         ->get("{$this->hostName}/protected-route?expires=123&signature=456")
